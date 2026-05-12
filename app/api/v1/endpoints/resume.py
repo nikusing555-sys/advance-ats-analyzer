@@ -1,8 +1,12 @@
 from fastapi import APIRouter, UploadFile, File, Form
 import pdfplumber
 import re
-
+from pydantic import BaseModel
+from openai import OpenAI
+import os
 router = APIRouter()
+client = OpenAI()
+api_key = os.getenv("OPENAI_API_KEY")
 
 # =========================
 # STOPWORDS
@@ -415,4 +419,39 @@ async def analyze_resume(
 
         "suggestions": suggestions
 
+    }
+class ResumeRequest(BaseModel):
+    resume_text: str
+
+
+@router.post("/ai-rewrite")
+def ai_rewrite(data: ResumeRequest):
+
+    prompt = f"""
+    Rewrite this resume professionally.
+
+    Make it:
+    - ATS optimized
+    - Professional
+    - Clean
+    - Strong action words
+    - Better formatting
+
+    Resume:
+
+    {data.resume_text}
+    """
+
+    response = client.chat.completions.create(
+        model="gpt-4.1-mini",
+        messages=[
+            {
+                "role": "user",
+                "content": prompt
+            }
+        ]
+    )
+
+    return {
+        "rewritten_resume": response.choices[0].message.content
     }
