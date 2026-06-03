@@ -483,7 +483,7 @@ def save_resume(
         "resume_id": resume.id
     }
 
- 👇
+
 @router.post("/rewrite/{resume_id}")
 def rewrite_resume(
     resume_id: int,
