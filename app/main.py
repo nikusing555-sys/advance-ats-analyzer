@@ -1,8 +1,12 @@
 from fastapi import FastAPI
 from app.api.v1.endpoints.resume import router as resume_router
 from app.api.v1.endpoints.auth import router as auth_router
+from app.models.user import User
+from app.models.resume import Resume
+from app.database.db import base,engine
 
 app = FastAPI(title="Advanced ATS Analyzer")
+base.metadata.create_all(bind=engine)
 
 app.include_router(
     auth_router,
