@@ -460,21 +460,53 @@ class ResumeRequest(BaseModel):
 
 
 @router.post("/ai-rewrite")
-def ai_rewrite(data: ResumeRequest):
-
+def ai_rewrite(resume_id:int,data:ResumeCreate,db:Session = Depends(get_db)):
     prompt = f"""
-    Rewrite this resume professionally.
+    You are an ATS Resume Expert.
 
-    Make it:
-    - ATS optimized
-    - Professional
-    - Clean
-    - Strong action words
-    - Better formatting
+    Rewrite the resume into a professional ATS-friendly resume.
 
-    Resume:
+    JOB DESCRIPTION:
+    {data.job_description}
 
-    {data.resume_text}
+    ORIGINAL RESUME:
+    {data.original_resume}
+
+    MISSING SKILLS:
+    {data.missing_skills}
+
+    IMPORTANT RULES:
+
+    1. Return ONLY resume content.
+    2. No introduction text.
+    3. No markdown.
+    4. No ###.
+    5. No **.
+    6. No explanations.
+
+    Use sections:
+
+    CONTACT INFORMATION
+
+    PROFESSIONAL SUMMARY
+
+    TECHNICAL SKILLS
+
+    EXPERIENCE
+
+    PROJECTS
+
+    EDUCATION
+
+    CERTIFICATIONS
+
+    LANGUAGES
+
+    ACTIVITIES
+
+    Use strong action verbs.
+    Include missing skills naturally.
+    Make the resume ATS friendly.
     """
 
     response = client.chat.completions.create(
@@ -486,10 +518,30 @@ def ai_rewrite(data: ResumeRequest):
             }
         ]
     )
+    rewritten_resume = response.choices[0].message.content
+    rewritten_resume = rewritten_resume.replace("###", "")
+    rewritten_resume = rewritten_resume.replace("**", "")
+    rewritten_resume = rewritten_resume.replace("---", "")
+    rewritten_resume = rewritten_resume.replace("#","")
+    resume = db.query(Resume).filter(
+        Resume.id == resume_id
+    ).first()
+
+    if not resume:
+        return {"error": "Resume not found"}
+
+    resume.rewritten_resume = rewritten_resume
+
+    db.commit()
+
+    db.refresh(resume)
 
     return {
-        "rewritten_resume": response.choices[0].message.content
+        "resume_id": resume.id,
+        "rewritten_resume": rewritten_resume
     }
+
+
 @router.post("/save")
 def save_resume(
     data: ResumeCreate,
