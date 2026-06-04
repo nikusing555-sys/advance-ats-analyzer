@@ -14,6 +14,7 @@ class Resume(Base):
     original_resume = Column(Text)
 
     ats_score = Column(Integer)
+    job_description = Column(Text)
 
     missing_skills = Column(Text)
 
