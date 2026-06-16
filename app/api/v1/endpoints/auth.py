@@ -57,9 +57,9 @@ def signup(
 
     return {
         "message": "Signup successful",
-        "user_id": user.id,
-        "name": user.name,
-        "email": user.email
+        "user_id": new_user.id,
+        "name": new_user.name,
+        "email": new_user.email
 
     }
 
