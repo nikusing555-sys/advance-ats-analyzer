@@ -8,14 +8,22 @@ class Subscription(Base):
 
     id = Column(Integer, primary_key=True, index=True)
 
-    user_id = Column(Integer)
+    user_id = Column(Integer, nullable=False)
 
-    plan_name = Column(String)
+    plan_name = Column(String, nullable=False)
 
-    amount = Column(Integer)
+    amount = Column(Integer, nullable=False)
 
     payment_id = Column(String, nullable=True)
 
     order_id = Column(String, nullable=True)
 
-    is_active = Column(Boolean, default=False)
+    payment_status = Column(
+        String,
+        default="Pending"
+    )
+
+    is_active = Column(
+        Boolean,
+        default=False
+    )

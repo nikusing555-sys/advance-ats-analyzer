@@ -56,7 +56,11 @@ def signup(
     db.refresh(new_user)
 
     return {
-        "message": "Signup successful"
+        "message": "Signup successful",
+        "user_id": user.id,
+        "name": user.name,
+        "email": user.email
+
     }
 
 
