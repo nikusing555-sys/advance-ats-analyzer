@@ -16,17 +16,37 @@ def get_plans():
         {
             "name": "Free",
             "price": 0,
-            "resume_limit": 1
+            "resume_limit": 1,
+            "description": [
+                "1 Resume Analysis",
+                "Basic ATS Score",
+                "Basic Resume Rewrite",
+                "Free Template Access"
+            ]
         },
         {
             "name": "Pro",
             "price": 199,
-            "resume_limit": 5
+            "resume_limit": 5,
+            "description": [
+                "5 Resume Analyses",
+                "Advanced ATS Score",
+                "AI Resume Rewrite",
+                "PDF Download",
+                "Premium Templates"
+            ]
         },
         {
             "name": "Premium",
             "price": 299,
-            "resume_limit": 10
+            "resume_limit": 10,
+            "description": [
+                "10 Resume Analyses",
+                "Unlimited AI Rewrites",
+                "Premium Templates",
+                "Priority Processing",
+                "Advanced Reports"
+            ]
         }
     ]
 @router.post("/create-order")
