@@ -460,6 +460,10 @@ class ResumeRequest(BaseModel):
 
 import json
 
+import json
+from fastapi import Depends
+from sqlalchemy.orm import Session
+
 @router.post("/ai-rewrite")
 def ai_rewrite(
     resume_id: int,
@@ -467,10 +471,20 @@ def ai_rewrite(
     db: Session = Depends(get_db)
 ):
 
+    resume = db.query(Resume).filter(
+        Resume.id == resume_id
+    ).first()
+
+    if not resume:
+        raise HTTPException(
+            status_code=404,
+            detail="Resume not found"
+        )
+
     prompt = f"""
 You are an ATS Resume Expert.
 
-Rewrite the resume professionally.
+Rewrite the resume according to the job description.
 
 JOB DESCRIPTION:
 {data.job_description}
@@ -486,56 +500,55 @@ Return ONLY valid JSON.
 Format:
 
 {{
-    "professional_summary":"",
-    "technical_skills":"",
-    "experience":"",
-    "projects":"",
-    "education":"",
-    "certifications":"",
-    "languages":"",
-    "activities":""
+  "professional_summary": "",
+  "technical_skills": [],
+  "experience": [],
+  "projects": [],
+  "education": [],
+  "certifications": [],
+  "languages": [],
+  "activities": []
 }}
 
 Rules:
 
-1. Return JSON only
+1. JSON only
 2. No markdown
 3. No explanation
 4. No extra text
-5. Include missing skills naturally
-6. Make ATS friendly
+5. Add missing skills naturally
+6. ATS friendly
+7. Professional content
+8. Every section must contain data
 """
 
-    response = client.chat.completions.create(
-        model="gpt-4.1-mini",
-        messages=[
-            {
-                "role": "user",
-                "content": prompt
-            }
-        ]
-    )
-
-    content = response.choices[0].message.content
-
     try:
+
+        response = client.chat.completions.create(
+            model="gpt-4.1-mini",
+            response_format={"type": "json_object"},
+            messages=[
+                {
+                    "role": "system",
+                    "content": "Return valid JSON only."
+                },
+                {
+                    "role": "user",
+                    "content": prompt
+                }
+            ]
+        )
+
+        content = response.choices[0].message.content
+
         rewritten_resume = json.loads(content)
 
     except Exception as e:
 
-        return {
-            "error": "AI returned invalid JSON",
-            "details": str(e)
-        }
-
-    resume = db.query(Resume).filter(
-        Resume.id == resume_id
-    ).first()
-
-    if not resume:
-        return {
-            "error": "Resume not found"
-        }
+        raise HTTPException(
+            status_code=500,
+            detail=f"AI Rewrite Failed: {str(e)}"
+        )
 
     resume.rewritten_resume = json.dumps(
         rewritten_resume,
@@ -543,35 +556,11 @@ Rules:
     )
 
     db.commit()
-
     db.refresh(resume)
 
     return {
         "resume_id": resume.id,
-
-        "professional_summary":
-            rewritten_resume.get("professional_summary"),
-
-        "technical_skills":
-            rewritten_resume.get("technical_skills"),
-
-        "experience":
-            rewritten_resume.get("experience"),
-
-        "projects":
-            rewritten_resume.get("projects"),
-
-        "education":
-            rewritten_resume.get("education"),
-
-        "certifications":
-            rewritten_resume.get("certifications"),
-
-        "languages":
-            rewritten_resume.get("languages"),
-
-        "activities":
-            rewritten_resume.get("activities")
+        "rewritten_resume": rewritten_resume
     }
 
 
@@ -600,54 +589,7 @@ def save_resume(
     }
 
 
-@router.put("/rewrite/{resume_id}")
-def rewrite_resume(
-    resume_id: int,
-    db: Session = Depends(get_db)
-):
-    resume = db.query(Resume).filter(
-        Resume.id == resume_id
-    ).first()
 
-    if not resume:
-        return {"error": "Resume not found"}
-
-    prompt = f"""
-    Rewrite this resume professionally.
-
-    ATS Score: {resume.ats_score}
-
-    Missing Skills:
-    {resume.missing_skills}
-
-    Resume:
-    {resume.original_resume}
-
-    Improve ATS score.
-    Add strong action verbs.
-    Improve formatting.
-    """
-
-    response = client.chat.completions.create(
-        model="gpt-4.1-mini",
-        messages=[
-            {
-                "role": "user",
-                "content": prompt
-            }
-        ]
-    )
-
-    rewritten = response.choices[0].message.content
-
-    resume.rewritten_resume = rewritten
-
-    db.commit()
-
-    return {
-        "resume_id": resume.id,
-        "rewritten_resume": rewritten
-    }
 @router.get("/download/{resume_id}")
 def download_resume(
     resume_id: int,
