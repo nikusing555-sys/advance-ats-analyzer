@@ -13,6 +13,7 @@ from app.models.resume import Resume
 from app.schemas.resume import ResumeCreate
 from app.core.pdf_generator import generate_resume_pdf
 from fastapi.responses import FileResponse
+from fastapi import APIRouter,Depends,HTTPException
 
 router = APIRouter()
 client = OpenAI(api_key = os.getenv("OPENAI_API_KEY"))
@@ -567,7 +568,7 @@ def save_resume(
     }
 
 
-@router.post("/rewrite/{resume_id}")
+@router.put("/rewrite/{resume_id}")
 def rewrite_resume(
     resume_id: int,
     db: Session = Depends(get_db)
@@ -644,3 +645,95 @@ def download_resume(
         filename=filename,
         media_type="application/pdf"
     )
+
+@router.get("/")
+def get_all_resumes(
+    db: Session = Depends(get_db)
+):
+
+    resumes = db.query(Resume).all()
+
+    return [
+        {
+            "id": resume.id,
+            "name": resume.name,
+            "email": resume.email,
+            "ats_score": resume.ats_score,
+            "template_id": resume.template_id
+        }
+        for resume in resumes
+    ]
+@router.delete("/{resume_id}")
+def delete_resume(
+    resume_id: int,
+    db: Session = Depends(get_db)
+):
+
+    resume = db.query(Resume).filter(
+        Resume.id == resume_id
+    ).first()
+
+    if not resume:
+        raise HTTPException(
+            status_code=404,
+            detail="Resume not found"
+        )
+
+    db.delete(resume)
+
+    db.commit()
+
+    return {
+        "message": "Resume deleted successfully"
+    }
+@router.get("/report/{resume_id}")
+def get_resume_report(
+    resume_id: int,
+    db: Session = Depends(get_db)
+):
+
+    resume = db.query(Resume).filter(
+        Resume.id == resume_id
+    ).first()
+
+    if not resume:
+        raise HTTPException(
+            status_code=404,
+            detail="Resume not found"
+        )
+
+    return {
+        "resume_id": resume.id,
+        "ats_score": resume.ats_score,
+        "missing_skills": resume.missing_skills,
+        "template_id": resume.template_id,
+        "name": resume.name
+    }
+@router.get("/{resume_id}")
+def get_resume(
+    resume_id: int,
+    db: Session = Depends(get_db)
+):
+    resume = db.query(Resume).filter(
+        Resume.id == resume_id
+    ).first()
+
+    if not resume:
+        raise HTTPException(
+            status_code=404,
+            detail="Resume not found"
+        )
+
+    return {
+        "id": resume.id,
+        "name": resume.name,
+        "email": resume.email,
+        "phone": resume.phone,
+        "linkedin": resume.linkedin,
+        "ats_score": resume.ats_score,
+        "job_description": resume.job_description,
+        "missing_skills": resume.missing_skills,
+        "rewritten_resume": resume.rewritten_resume,
+        "pdf_url": resume.pdf_url,
+        "template_id": resume.template_id
+    }

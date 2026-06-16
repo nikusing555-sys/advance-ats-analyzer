@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from app.database.db import SessionLocal
 from app.models.user import User
 from app.schemas.user import SignupSchema, LoginSchema
-
+from app.schemas.auth import ForgotPasswordRequest, ResetPasswordRequest
 from app.core.security import (
     hash_password,
     verify_password,
@@ -92,4 +92,46 @@ def login(
     return {
         "access_token": token,
         "token_type": "bearer"
+    }
+@router.post("/forgot-password")
+def forgot_password(
+    data: ForgotPasswordRequest,
+    db: Session = Depends(get_db)
+):
+
+    user = db.query(User).filter(
+        User.email == data.email
+    ).first()
+
+    if not user:
+        raise HTTPException(
+            status_code=404,
+            detail="User not found"
+        )
+
+    return {
+        "message": "Password reset request accepted"
+    }
+@router.post("/reset-password")
+def reset_password(
+    data: ResetPasswordRequest,
+    db: Session = Depends(get_db)
+):
+
+    user = db.query(User).filter(
+        User.email == data.email
+    ).first()
+
+    if not user:
+        raise HTTPException(
+            status_code=404,
+            detail="User not found"
+        )
+
+    user.password = data.new_password
+
+    db.commit()
+
+    return {
+        "message": "Password reset successfully"
     }
