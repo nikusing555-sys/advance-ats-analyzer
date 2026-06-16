@@ -302,6 +302,7 @@ def check_template(text):
 @router.post("/analyze")
 
 async def analyze_resume(
+    user_id: int = Form(...),
 
     file: UploadFile = File(...),
 
@@ -410,6 +411,7 @@ async def analyze_resume(
 
     score = min(score, 95)
     resume = Resume(
+        user_id=user_id,
         name=name,
         email=email,
         phone=phone,

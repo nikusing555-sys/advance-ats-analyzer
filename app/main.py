@@ -8,7 +8,9 @@ from app.api.v1.endpoints import user
 from app.api.v1.endpoints.template import router as template_router
 from app.api.v1.endpoints.subscription import router as subscription_router
 from app.models.subscription import Subscription
-
+from app.api.v1.endpoints import dashboard
+from app.api.v1.endpoints import usage
+from app.api.v1.endpoints import admin
 app = FastAPI(title="Advanced ATS Analyzer")
 Base.metadata.create_all(bind=engine)
 
@@ -29,3 +31,10 @@ def home():
     return {"message": "Advance ATS Analyzer"}
 app.include_router(template_router, prefix="/template", tags=["Template"])
 app.include_router(subscription_router)
+app.include_router(
+    dashboard.router,
+    prefix="/dashboard",
+    tags=["Dashboard"]
+)
+app.include_router(usage.router, prefix="/usage", tags=["Usage"])
+app.include_router(admin.router, prefix="/admin", tags=["Admin"])

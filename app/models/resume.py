@@ -5,6 +5,7 @@ class Resume(Base):
     __tablename__ = "resumes"
 
     id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer)
 
     name = Column(String)
     email = Column(String)
