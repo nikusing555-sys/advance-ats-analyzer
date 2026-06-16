@@ -14,6 +14,7 @@ from app.schemas.resume import ResumeCreate
 from app.core.pdf_generator import generate_resume_pdf
 from fastapi.responses import FileResponse
 from fastapi import APIRouter,Depends,HTTPException
+import json
 
 router = APIRouter()
 client = OpenAI(api_key = os.getenv("OPENAI_API_KEY"))
@@ -314,13 +315,10 @@ async def analyze_resume(
     resume_raw = extract_text(file.file)
 
     resume_text = clean_text(resume_raw)
-    name = extract_name(resume_text)
-
-    email = extract_email(resume_text)
-
-    phone = extract_phone(resume_text)
-
-    linkedin = extract_linkedin(resume_text)
+    name = extract_name(resume_raw)
+    email = extract_email(resume_raw)
+    phone = extract_phone(resume_raw)
+    linkedin = extract_linkedin(resume_raw)
 
     jd_text = clean_text(job_description)
 
@@ -460,55 +458,53 @@ class ResumeRequest(BaseModel):
     resume_text: str
 
 
+import json
+
 @router.post("/ai-rewrite")
-def ai_rewrite(resume_id:int,data:ResumeCreate,db:Session = Depends(get_db)):
+def ai_rewrite(
+    resume_id: int,
+    data: ResumeCreate,
+    db: Session = Depends(get_db)
+):
+
     prompt = f"""
-    You are an ATS Resume Expert.
+You are an ATS Resume Expert.
 
-    Rewrite the resume into a professional ATS-friendly resume.
+Rewrite the resume professionally.
 
-    JOB DESCRIPTION:
-    {data.job_description}
+JOB DESCRIPTION:
+{data.job_description}
 
-    ORIGINAL RESUME:
-    {data.original_resume}
+ORIGINAL RESUME:
+{data.original_resume}
 
-    MISSING SKILLS:
-    {data.missing_skills}
+MISSING SKILLS:
+{data.missing_skills}
 
-    IMPORTANT RULES:
+Return ONLY valid JSON.
 
-    1. Return ONLY resume content.
-    2. No introduction text.
-    3. No markdown.
-    4. No ###.
-    5. No **.
-    6. No explanations.
+Format:
 
-    Use sections:
+{{
+    "professional_summary":"",
+    "technical_skills":"",
+    "experience":"",
+    "projects":"",
+    "education":"",
+    "certifications":"",
+    "languages":"",
+    "activities":""
+}}
 
-    CONTACT INFORMATION
+Rules:
 
-    PROFESSIONAL SUMMARY
-
-    TECHNICAL SKILLS
-
-    EXPERIENCE
-
-    PROJECTS
-
-    EDUCATION
-
-    CERTIFICATIONS
-
-    LANGUAGES
-
-    ACTIVITIES
-
-    Use strong action verbs.
-    Include missing skills naturally.
-    Make the resume ATS friendly.
-    """
+1. Return JSON only
+2. No markdown
+3. No explanation
+4. No extra text
+5. Include missing skills naturally
+6. Make ATS friendly
+"""
 
     response = client.chat.completions.create(
         model="gpt-4.1-mini",
@@ -519,19 +515,32 @@ def ai_rewrite(resume_id:int,data:ResumeCreate,db:Session = Depends(get_db)):
             }
         ]
     )
-    rewritten_resume = response.choices[0].message.content
-    rewritten_resume = rewritten_resume.replace("###", "")
-    rewritten_resume = rewritten_resume.replace("**", "")
-    rewritten_resume = rewritten_resume.replace("---", "")
-    rewritten_resume = rewritten_resume.replace("#","")
+
+    content = response.choices[0].message.content
+
+    try:
+        rewritten_resume = json.loads(content)
+
+    except Exception as e:
+
+        return {
+            "error": "AI returned invalid JSON",
+            "details": str(e)
+        }
+
     resume = db.query(Resume).filter(
         Resume.id == resume_id
     ).first()
 
     if not resume:
-        return {"error": "Resume not found"}
+        return {
+            "error": "Resume not found"
+        }
 
-    resume.rewritten_resume = rewritten_resume
+    resume.rewritten_resume = json.dumps(
+        rewritten_resume,
+        indent=2
+    )
 
     db.commit()
 
@@ -539,7 +548,30 @@ def ai_rewrite(resume_id:int,data:ResumeCreate,db:Session = Depends(get_db)):
 
     return {
         "resume_id": resume.id,
-        "rewritten_resume": rewritten_resume
+
+        "professional_summary":
+            rewritten_resume.get("professional_summary"),
+
+        "technical_skills":
+            rewritten_resume.get("technical_skills"),
+
+        "experience":
+            rewritten_resume.get("experience"),
+
+        "projects":
+            rewritten_resume.get("projects"),
+
+        "education":
+            rewritten_resume.get("education"),
+
+        "certifications":
+            rewritten_resume.get("certifications"),
+
+        "languages":
+            rewritten_resume.get("languages"),
+
+        "activities":
+            rewritten_resume.get("activities")
     }
 
 
@@ -631,13 +663,54 @@ def download_resume(
 
     filename = f"resume_{resume.id}.pdf"
 
+
+    try:
+        data = json.loads(resume.rewritten_resume)
+
+        pdf_text = f"""
+    PROFESSIONAL SUMMARY
+
+    {data.get('professional_summary', '')}
+
+    TECHNICAL SKILLS
+
+    {data.get('technical_skills', '')}
+
+    EXPERIENCE
+
+    {data.get('experience', '')}
+
+    PROJECTS
+
+    {data.get('projects', '')}
+
+    EDUCATION
+
+    {data.get('education', '')}
+
+    CERTIFICATIONS
+
+    {data.get('certifications', '')}
+
+    LANGUAGES
+
+    {data.get('languages', '')}
+
+    ACTIVITIES
+
+    {data.get('activities', '')}
+    """
+
+    except:
+        pdf_text = resume.rewritten_resume
+
     generate_resume_pdf(
         filename=filename,
         name=resume.name,
         email=resume.email,
         phone=resume.phone,
         linkedin=resume.linkedin,
-        content=resume.rewritten_resume
+        content=pdf_text
     )
 
     return FileResponse(
