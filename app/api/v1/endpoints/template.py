@@ -35,11 +35,9 @@ def select_template(
     db: Session = Depends(get_db)
 ):
 
-    resume = (
-        db.query(Resume)
-        .filter(Resume.id == data.resume_id)
-        .first()
-    )
+    resume = db.query(Resume).filter(
+        Resume.id == data.resume_id
+    ).first()
 
     if not resume:
         raise HTTPException(
@@ -47,11 +45,9 @@ def select_template(
             detail="Resume not found"
         )
 
-    template = (
-        db.query(Template)
-        .filter(Template.id == data.template_id)
-        .first()
-    )
+    template = db.query(Template).filter(
+        Template.id == data.template_id
+    ).first()
 
     if not template:
         raise HTTPException(
@@ -84,20 +80,20 @@ def seed_templates(db: Session = Depends(get_db)):
     templates = [
         Template(
             name="Classic ATS",
-            preview_image="classic.png",
-            description="ATS friendly professional template",
+            preview_image="/static/templates/classic.png",
+            description="ATS Friendly Professional Resume",
             is_premium=False
         ),
         Template(
             name="Modern Pro",
-            preview_image="modern.png",
-            description="Modern premium template",
+            preview_image="/static/templates/modern.png",
+            description="Modern Premium Resume",
             is_premium=True
         ),
         Template(
             name="Executive",
-            preview_image="executive.png",
-            description="Executive level resume",
+            preview_image="/static/templates/executive.png",
+            description="Executive Level Resume",
             is_premium=True
         )
     ]
@@ -106,5 +102,6 @@ def seed_templates(db: Session = Depends(get_db)):
     db.commit()
 
     return {
-        "message": "Templates created successfully"
+        "message": "Templates created successfully",
+        "count": 3
     }

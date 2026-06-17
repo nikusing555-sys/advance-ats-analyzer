@@ -11,7 +11,9 @@ from app.models.subscription import Subscription
 from app.api.v1.endpoints import dashboard
 from app.api.v1.endpoints import usage
 from app.api.v1.endpoints import admin
+from fastapi.staticfiles import StaticFiles
 app = FastAPI(title="Advanced ATS Analyzer")
+app.mount("/static", StaticFiles(directory="app/static"), name="static")
 Base.metadata.create_all(bind=engine)
 
 app.include_router(
