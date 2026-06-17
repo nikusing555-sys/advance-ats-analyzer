@@ -25,7 +25,8 @@ def get_dashboard(
 
     subscription = db.query(Subscription).filter(
         Subscription.user_id == user_id,
-        Subscription.is_active == True
+        Subscription.is_active == True,
+        Subscription.payment_status == "Paid"
     ).first()
 
     resume_count = db.query(Resume).filter(

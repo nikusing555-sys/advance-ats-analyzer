@@ -70,33 +70,47 @@ def login(
     db: Session = Depends(get_db)
 ):
 
-    db_user = db.query(User).filter(
-        User.email == user.email
-    ).first()
+    try:
 
-    if not db_user:
-        raise HTTPException(
-            status_code=400,
-            detail="Invalid email"
+        db_user = db.query(User).filter(
+            User.email == user.email
+        ).first()
+
+        if not db_user:
+            raise HTTPException(
+                status_code=401,
+                detail="Invalid email or password"
+            )
+
+        if not verify_password(
+            user.password,
+            db_user.password
+        ):
+            raise HTTPException(
+                status_code=401,
+                detail="Invalid email or password"
+            )
+
+        token = create_access_token(
+            {"sub": db_user.email}
         )
 
-    if not verify_password(
-        user.password,
-        db_user.password
-    ):
+        return {
+            "access_token": token,
+            "token_type": "bearer",
+            "user_id": db_user.id,
+            "name": db_user.name,
+            "email": db_user.email
+        }
+
+    except HTTPException:
+        raise
+
+    except Exception:
         raise HTTPException(
-            status_code=400,
-            detail="Invalid password"
+            status_code=500,
+            detail="Internal server error"
         )
-
-    token = create_access_token(
-        {"sub": db_user.email}
-    )
-
-    return {
-        "access_token": token,
-        "token_type": "bearer"
-    }
 @router.post("/forgot-password")
 def forgot_password(
     data: ForgotPasswordRequest,
@@ -132,7 +146,9 @@ def reset_password(
             detail="User not found"
         )
 
-    user.password = data.new_password
+    user.password = hash_password(
+        data.new_password
+    )
 
     db.commit()
 

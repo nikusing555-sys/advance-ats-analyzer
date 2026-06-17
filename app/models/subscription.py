@@ -1,4 +1,5 @@
-from sqlalchemy import Column, Integer, String, Boolean
+from sqlalchemy import Column, Integer, String, Boolean, DateTime
+from datetime import datetime
 
 from app.database.db import Base
 
@@ -26,4 +27,14 @@ class Subscription(Base):
     is_active = Column(
         Boolean,
         default=False
+    )
+
+    start_date = Column(
+        DateTime,
+        nullable=True
+    )
+
+    end_date = Column(
+        DateTime,
+        nullable=True
     )

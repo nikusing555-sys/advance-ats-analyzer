@@ -14,6 +14,8 @@ from app.schemas.resume import ResumeCreate
 from app.core.pdf_generator import generate_resume_pdf
 from fastapi.responses import FileResponse
 from fastapi import APIRouter,Depends,HTTPException
+from app.models.subscription import Subscription
+
 import json
 
 router = APIRouter()
@@ -310,6 +312,46 @@ async def analyze_resume(
     db: Session = Depends(get_db)
 
 ):
+    # FREE PLAN LIMIT CHECK
+
+    subscription = db.query(
+        Subscription
+    ).filter(
+        Subscription.user_id == user_id,
+        Subscription.is_active == True,
+        Subscription.payment_status == "Paid"
+    ).first()
+
+    total_analyses = db.query(
+        Resume
+    ).filter(
+        Resume.user_id == user_id
+    ).count()
+
+    if not subscription:
+
+        if total_analyses >= 2:
+            raise HTTPException(
+                status_code=403,
+                detail="Free plan limit reached. Please upgrade your plan."
+            )
+
+    elif subscription.plan_name.lower() == "pro":
+
+        if total_analyses >= 5:
+            raise HTTPException(
+                status_code=403,
+                detail="Pro plan limit reached."
+            )
+
+    elif subscription.plan_name.lower() == "premium":
+
+        if total_analyses >= 10:
+            raise HTTPException(
+                status_code=403,
+                detail="Premium plan limit reached."
+            )
+
 
     # Extract resume text
 

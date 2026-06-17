@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from app.database.db import get_db
 from app.models.subscription import Subscription
 from app.schemas.subscription import SubscriptionCreate
+from datetime import datetime,timedelta
 
 router = APIRouter(
     prefix="/subscription",
@@ -90,6 +91,19 @@ def verify_payment(
         }
 
     subscription.payment_status = "Paid"
+    subscription.is_active = True
+
+    subscription.start_date = datetime.utcnow()
+
+    if subscription.plan_name.lower() == "pro":
+        subscription.end_date = (
+            datetime.utcnow() + timedelta(days=30)
+        )
+
+    elif subscription.plan_name.lower() == "premium":
+        subscription.end_date = (
+            datetime.utcnow() + timedelta(days=30)
+        )
 
     db.commit()
 
@@ -115,5 +129,8 @@ def subscription_status(
 
     return {
         "plan": subscription.plan_name,
-        "status": subscription.payment_status
+        "status": subscription.payment_status,
+        "start_date": subscription.start_date,
+        "end_date": subscription.end_date,
+        "is_active": subscription.is_active
     }
