@@ -8,7 +8,7 @@ from app.schemas.contact import ContactCreate
 router = APIRouter()
 
 
-@router.post("/")
+@router.post("")
 def contact_us(
     data: ContactCreate,
     db: Session = Depends(get_db)
@@ -33,7 +33,7 @@ def contact_us(
     }
 
 
-@router.get("/")
+@router.get("")
 def get_all_contacts(
     db: Session = Depends(get_db)
 ):
